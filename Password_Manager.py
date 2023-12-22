@@ -110,12 +110,82 @@ def add_password(website, password):
     with open('passwords.json', 'w') as file:
          json.dump(data, file, indent = 4)
          
-  
+ 
+ # Function to retreive a saved password 
+ 
+def get_password(website):
+    # check if passwords.json exists 
+    if not os.path.exists('passwords.json'):
+         return None
+    try:
+        with open('passwords.json', 'r') as file:
+            data = json.load(file)
+    except json.JSONDecodeError:
+        data = []
     
-        
+    for entry in data:
+        if entry['website'] == website:
+            decrypted_password = decrypt_password(cipher,entry['password'])
+            return decrypted_password
+    
+    return None 
+            
+     
             
               
-           
+           # Infinite loop to keep the program running until the user chooses to quit.
+while True:
+   print("1. Register")
+   print("2. Login")
+   print("3. Quit")
+   choice = input("Enter your choice: ")
+   if choice == '1':  # If a user wants to register
+       file = 'user_data.json'
+       if os.path.exists(file) and os.path.getsize(file) != 0:
+           print("\n[-] Master user already exists!!")
+           sys.exit()
+       else:
+           username = input("Enter your username: ")
+           master_password = getpass.getpass("Enter your master password: ")
+           register(username, master_password)
+   elif choice == '2':  # If a User wants to log in
+       file = 'user_data.json'
+       if os.path.exists(file):
+           username = input("Enter your username: ")
+           master_password = getpass.getpass("Enter your master password: ")
+           login(username, master_password)
+       else:
+           print("\n[-] You have not registered. Please do that.\n")
+           sys.exit()
+       # Various options after a successful Login.
+       while True:
+           print("1. Add Password")
+           print("2. Get Password")
+           print("3. View Saved websites")
+           print("4. Quit")
+           password_choice = input("Enter your choice: ")
+           if password_choice == '1':  # If a user wants to add a password
+               website = input("Enter website: ")
+               password = getpass.getpass("Enter password: ")
+               # Encrypt and add the password
+               add_password(website, password)
+               print("\n[+] Password added!\n")
+           elif password_choice == '2':  # If a User wants to retrieve a password
+               website = input("Enter website: ")
+               decrypted_password = get_password(website)
+               if website and decrypted_password:
+                   # Copy password to clipboard for convenience
+                   pyperclip.copy(decrypted_password)
+                   print(f"\n[+] Password for {website}: {decrypted_password}\n[+] Password copied to clipboard.\n")
+               else:
+                   print("\n[-] Password not found! Did you save the password?"
+                         "\n[-] Use option 3 to see the websites you saved.\n")
+           elif password_choice == '3':  # If a user wants to view saved websites
+               view_websites()
+           elif password_choice == '4':  # If a user wants to quit the password manager
+               break
+   elif choice == '3':  # If a user wants to quit the program
+       break        
           
       
      
