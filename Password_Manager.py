@@ -1,6 +1,8 @@
+from flask import Flask, render_template, request, redirect, url_for, session
+
 import json, hashlib, getpass, os, pyperclip, sys
 from cryptography.fernet import Fernet
-
+app = Flask(__name__)
 
 # Function for Hashing the Master Password.
 def hash_password(password):
@@ -28,27 +30,51 @@ def encrypt_password(cipher, password):
 def decrypt_password(cipher, encrypted_password):
     return cipher.decrypt(encrypted_password.encode()).decode()
 
+@app.route('/')
+def home():
+    return render_template('index.html')
 
+
+@app.route('/register',methods=['GET', 'POST'])
 # Function to register you.
-def register(username, master_password):
-    # Encrypt the master password before storing it
-    hashed_master_password = hash_password(master_password)
-    user_data = {'username': username, 'master_password': hashed_master_password}
-    file_name = 'user_data.json'
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        master_password = request.form.get('master_password')
 
-    if os.path.exists(file_name) and os.path.getsize(file_name) == 0:
+        hashed_master_password = hash_password(master_password)
+        user_data = {'username': username, 'master_password': hashed_master_password}
+        file_name = 'user_data.json'
+
+        try:
+            with open(file_name, 'r') as file:
+                existing_data = json.load(file)
+                if not isinstance(existing_data, list):
+                    existing_data = []
+        except FileNotFoundError:
+            # Handle the case where the file doesn't exist yet
+            existing_data = []
+
+        existing_data.append(user_data)
+
         with open(file_name, 'w') as file:
-            json.dump(user_data, file)
+            json.dump(existing_data, file, indent=4)
             print("\n[+] Registration complete!!\n")
-    else:
-        with open(file_name, 'x') as file:
-            json.dump(user_data, file)
-            print("\n[+] Registration complete!!\n")
+
+        return redirect(url_for('home'))
+
+    return render_template('index.html')
+
 
 
 # Function to log you in.
-def login(username, entered_password):
+@app.route('/login', methods=['GET', 'POST'])
+
+def login():
     try:
+        username = request.get_data('login_username')
+        entered_password = request.get_data('login_password')
         with open('user_data.json', 'r') as file:
             user_data = json.load(file)
 
@@ -67,6 +93,8 @@ def login(username, entered_password):
 
 
 # Function to view saved websites.
+@app.route('/view_websites', methods = ['GET', 'POST'])
+
 def view_websites():
     try:
         with open('passwords.json', 'r') as data:
@@ -91,6 +119,8 @@ else:
 
 cipher = initialize_cipher(key)
 
+
+@app.route('/add_password', methods=['GET','POST'])
 
 # Function to add (save password).
 def add_password(website, password):
@@ -120,6 +150,7 @@ def add_password(website, password):
 
 
 # Function to retrieve a saved password.
+@app.route('/get_password',methods=['GET','POST'])
 def get_password(website):
     # Check if passwords.json exists
     if not os.path.exists('passwords.json'):
@@ -140,65 +171,71 @@ def get_password(website):
 
     return None
 
+ 
+if __name__ == "__main__":
+    app.run(debug=True) 
+        
 
-# Infinite loop to keep the program running until the user chooses to quit.
-while True:
-    print("1. Register")
-    print("2. Login")
-    print("3. Quit")
-    choice = input("Enter your choice: ")
 
-    if choice == '1':  # If a user wants to register
-        file = 'user_data.json'
-        if os.path.exists(file) and os.path.getsize(file) != 0:
-            print("\n[-] Master user already exists!!")
-            sys.exit()
-        else:
-            username = input("Enter your username: ")
-            master_password = getpass.getpass("Enter your master password: ")
-            register(username, master_password)
+# # Infinite loop to keep the program running until the user chooses to quit.
+# while True:
+#     print("1. Register")
+#     print("2. Login")
+#     print("3. Quit")
+#     choice = input("Enter your choice: ")
 
-    elif choice == '2':  # If a User wants to log in
-        file = 'user_data.json'
-        if os.path.exists(file):
-            username = input("Enter your username: ")
-            master_password = getpass.getpass("Enter your master password: ")
-            login(username, master_password)
-        else:
-            print("\n[-] You have not registered. Please do that.\n")
-            sys.exit()
-        # Various options after a successful Login.
-        while True:
-            print("1. Add Password")
-            print("2. Get Password")
-            print("3. View Saved websites")
-            print("4. Quit")
+#     if choice == '1':  # If a user wants to register
+#         file = 'user_data.json'
+#         if os.path.exists(file) and os.path.getsize(file) != 0:
+#             print("\n[-] Master user already exists!!")
+#             sys.exit()
+#         else:
+#             username = input("Enter your username: ")
+#             master_password = getpass.getpass("Enter your master password: ")
+#             register(username, master_password)
 
-            password_choice = input("Enter your choice: ")
-            if password_choice == '1':  # If a user wants to add a password
-                website = input("Enter website: ")
-                password = getpass.getpass("Enter password: ")
+#     elif choice == '2':  # If a User wants to log in
+#         file = 'user_data.json'
+#         if os.path.exists(file):
+#             username = input("Enter your username: ")
+#             master_password = getpass.getpass("Enter your master password: ")
+#             login(username, master_password)
+#         else:
+#             print("\n[-] You have not registered. Please do that.\n")
+#             sys.exit()
+#         # Various options after a successful Login.
+#         while True:
+#             print("1. Add Password")
+#             print("2. Get Password")
+#             print("3. View Saved websites")
+#             print("4. Quit")
 
-                # Encrypt and add the password
-                add_password(website, password)
-                print("\n[+] Password added!\n")
+#             password_choice = input("Enter your choice: ")
+#             if password_choice == '1':  # If a user wants to add a password
+#                 website = input("Enter website: ")
+#                 password = getpass.getpass("Enter password: ")
 
-            elif password_choice == '2':  # If a User wants to retrieve a password
-                website = input("Enter website: ")
-                decrypted_password = get_password(website)
-                if website and decrypted_password:
-                    # Copy password to clipboard for convenience
-                    pyperclip.copy(decrypted_password)
-                    print(f"\n[+] Password for {website}: {decrypted_password}\n[+] Password copied to clipboard.\n")
-                else:
-                    print("\n[-] Password not found! Did you save the password?"
-                          "\n[-] Use option 3 to see the websites you saved.\n")
+#                 # Encrypt and add the password
+#                 add_password(website, password)
+#                 print("\n[+] Password added!\n")
 
-            elif password_choice == '3':  # If a user wants to view saved websites
-                view_websites()
+#             elif password_choice == '2':  # If a User wants to retrieve a password
+#                 website = input("Enter website: ")
+#                 decrypted_password = get_password(website)
+#                 if website and decrypted_password:
+#                     # Copy password to clipboard for convenience
+#                     pyperclip.copy(decrypted_password)
+#                     print(f"\n[+] Password for {website}: {decrypted_password}\n[+] Password copied to clipboard.\n")
+#                 else:
+#                     print("\n[-] Password not found! Did you save the password?"
+#                           "\n[-] Use option 3 to see the websites you saved.\n")
 
-            elif password_choice == '4':  # If a user wants to quit the password manager
-                break
+#             elif password_choice == '3':  # If a user wants to view saved websites
+#                 view_websites()
 
-    elif choice == '3':  # If a user wants to quit the program
-        break
+#             elif password_choice == '4':  # If a user wants to quit the password manager
+#                 break
+
+#     elif choice == '3':  # If a user wants to quit the program
+#         break
+   
