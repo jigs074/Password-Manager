@@ -77,7 +77,6 @@ def login():
         entered_password = request.get_data('login_password')
         with open('user_data.json', 'r') as file:
             user_data = json.load(file)
-
         stored_password_hash = user_data.get('master_password')
         entered_password_hash = hash_password(entered_password)
 
